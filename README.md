@@ -18,7 +18,7 @@ robust testing and consistency across various projects.
 Easily install the package using pip:
 
 ```bash
-pip install https://github.com/macxred/consistent_df_df/tarball/main
+pip install https://github.com/macxred/consistent_df/tarball/main
 ```
 
 ## Testing Strategy
