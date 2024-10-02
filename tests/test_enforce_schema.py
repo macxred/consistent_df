@@ -41,6 +41,18 @@ def test_schema_invalid_dtype():
         enforce_schema(df, schema)
 
 
+def test_invalid_data_type():
+    schema_csv = """
+        column_name,        dtype,                mandatory
+        Column1,            int64,                True
+    """
+    schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
+
+    invalid_data = {"Column1": [1, 2]}  # Using a dictionary instead of DataFrame
+    with pytest.raises(TypeError, match="Data must be a pandas DataFrame or None."):
+        enforce_schema(invalid_data, schema)
+
+
 def test_empty_input():
     schema_csv = """
         column_name,        dtype,                mandatory
@@ -54,6 +66,22 @@ def test_empty_input():
     assert isinstance(result, pd.DataFrame)
     assert result.empty
     assert list(result.columns) == ["Column1", "Column2", "Date", "Column3"]
+
+
+def test_empty_dataframe() -> None:
+    schema_csv = """
+        column_name,        dtype,                mandatory
+        Column1,            int64,                True
+        Column2,            float64,              False
+    """
+    schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
+
+    empty_df = pd.DataFrame()
+    result = enforce_schema(empty_df, schema)
+
+    assert list(result.columns) == ["Column1", "Column2"]
+    assert result["Column1"].dtype == "int64"
+    assert result["Column2"].dtype == "float64"
 
 
 def test_required_columns_added():
@@ -160,6 +188,40 @@ def test_datetime_with_timezone():
     result = enforce_schema(data=df, schema=SAMPLE_SCHEMA)
     expected_date = pd.to_datetime("2021-01-01T12:00:00").tz_localize(ZoneInfo("US/Eastern"))
     assert expected_date == result["Date"].dt.tz_convert("US/Eastern").item()
+    assert result["Date"].dtype == "datetime64[ns, US/Eastern]"
+
+
+def test_unknown_datetime_dtype() -> None:
+    df = pd.DataFrame({"Column1": [1], "Date": ["2021-01-01"]})
+    schema_csv = """
+        column_name,        dtype,                mandatory
+        Column1,            int64,                True
+        Date,               datetime64[unknown],  True
+    """
+    schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
+
+    with pytest.raises(ValueError, match="Unknown datetime dtype: 'datetime64\\[unknown\\]'."):
+        enforce_schema(df, schema)
+
+
+def test_datetime_tz_convert() -> None:
+    df = pd.DataFrame(
+        {"Column1": [1], "Date": pd.to_datetime(["2021-01-01T12:00:00"]).tz_localize("UTC")}
+    )
+    schema_csv = """
+        column_name,        dtype,                        mandatory
+        Column1,            int64,                        True
+        Date,               "datetime64[ns, US/Eastern]", True
+    """
+    schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
+    result = enforce_schema(df, schema)
+    expected_date = (
+        pd.to_datetime("2021-01-01T12:00:00")
+        .tz_localize("UTC")
+        .tz_convert("US/Eastern")
+    )
+
+    assert result["Date"].dt.tz_convert("US/Eastern").item() == expected_date
     assert result["Date"].dtype == "datetime64[ns, US/Eastern]"
 
 
