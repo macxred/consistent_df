@@ -14,7 +14,7 @@ def test_schema_is_not_dataframe():
         enforce_schema(df, schema)
 
     # Test with an invalid schema type
-    schema = {"column_name": "Column1", "dtype": "int64", "mandatory": True}
+    schema = {"column": "Column1", "dtype": "int64", "mandatory": True}
     with pytest.raises(TypeError, match="Schema must be a pandas DataFrame."):
         enforce_schema(df, schema)
 
@@ -22,8 +22,8 @@ def test_schema_is_not_dataframe():
 def test_schema_missing_required_columns():
     df = pd.DataFrame({"Column1": [1, 2]})
     schema_csv = """
-        column_name,        dtype
-        Column1,            int64
+        column,
+        Column1,
     """
     schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     with pytest.raises(ValueError, match="Schema is missing required columns"):
@@ -33,18 +33,37 @@ def test_schema_missing_required_columns():
 def test_schema_invalid_dtype():
     df = pd.DataFrame({"Column1": [1, 2]})
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            ,                    True
+        column,     dtype,    mandatory
+        Column1,         ,    True
     """
     schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     with pytest.raises(AttributeError):
         enforce_schema(df, schema)
 
 
+def test_schema_without_mandatory_column():
+    schema_csv = """
+        column,        dtype
+        ticker,        string[python]
+        price,         Float64
+    """
+    schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
+    df = pd.DataFrame({"ticker": ["AAPL", "GOOGL"]})
+
+    with pytest.raises(ValueError, match="Input DataFrame is missing required columns: {'price'}"):
+        enforce_schema(df, schema)
+
+    df_with_all_columns = pd.DataFrame({
+        "ticker": ["AAPL", "GOOGL"],
+        "price": [150.0, 2800.0]
+    })
+    enforce_schema(df_with_all_columns, schema)
+
+
 def test_invalid_data_type():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
+        column,    dtype,                mandatory
+        Column1,   int64,                True
     """
     schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
 
@@ -55,7 +74,7 @@ def test_invalid_data_type():
 
 def test_empty_input():
     schema_csv = """
-        column_name,        dtype,                mandatory
+        column,             dtype,                mandatory
         Column1,            int64,                True
         Column2,            float64,              False
         Date,               datetime64[ns],       False
@@ -68,11 +87,11 @@ def test_empty_input():
     assert list(result.columns) == ["Column1", "Column2", "Date", "Column3"]
 
 
-def test_empty_dataframe() -> None:
+def test_empty_dataframe():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
-        Column2,            float64,              False
+        column,      dtype,    mandatory
+        Column1,     int64,    True
+        Column2,   float64,    False
     """
     schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
 
@@ -86,9 +105,9 @@ def test_empty_dataframe() -> None:
 
 def test_required_columns_added():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
-        Column2,            float64,              True
+        column,     dtype,     mandatory
+        Column1,    int64,     True
+        Column2,  float64,     True
     """
     SAMPLE_SCHEMA = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     result = enforce_schema(None, SAMPLE_SCHEMA)
@@ -101,9 +120,9 @@ def test_required_columns_added():
 
 def test_optional_columns_added():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
-        Column2,            float64,              False
+        column,      dtype,   mandatory
+        Column1,     int64,   True
+        Column2,    float64,  False
     """
     SAMPLE_SCHEMA = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     df = pd.DataFrame({"Column1": [1]})
@@ -114,8 +133,8 @@ def test_optional_columns_added():
 
 def test_missing_required_columns():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
+        column,    dtype,     mandatory
+        Column1,   int64,     True
     """
     SAMPLE_SCHEMA = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     df = pd.DataFrame({"Column3": ["data"]})
@@ -125,8 +144,8 @@ def test_missing_required_columns():
 
 def test_keep_extra_columns():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
+        column,    dtype,     mandatory
+        Column1,   int64,     True
     """
     SAMPLE_SCHEMA = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     df = pd.DataFrame({"Column1": [1], "Column3": ["extra"]})
@@ -141,9 +160,9 @@ def test_keep_extra_columns():
 
 def test_dtype_conversion():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
-        Column2,            float64,              False
+        column,    dtype,     mandatory
+        Column1,   int64,     True
+        Column2,   float64,     False
     """
     SAMPLE_SCHEMA = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     df = pd.DataFrame({"Column1": ["1", "2", "3"], "Column2": ["1.1", "2.2", "3.3"]})
@@ -154,9 +173,9 @@ def test_dtype_conversion():
 
 def test_invalid_dtype_conversion():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
-        Column2,            float64,              False
+        column,    dtype,     mandatory
+        Column1,   int64,     True
+        Column2,   float64,   False
     """
     SAMPLE_SCHEMA = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     df = pd.DataFrame({"Column1": ["invalid"], "Column2": ["data"]})
@@ -166,9 +185,9 @@ def test_invalid_dtype_conversion():
 
 def test_datetime_without_timezone():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
-        Date,               datetime64[ns],       True
+        column,    dtype,           mandatory
+        Column1,   int64,           True
+        Date,      datetime64[ns],  True
     """
     SAMPLE_SCHEMA = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     df = pd.DataFrame({"Column1": [1, 2], "Date": ["2021-01-01", "2022-02-02"]})
@@ -179,9 +198,9 @@ def test_datetime_without_timezone():
 
 def test_datetime_with_timezone():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
-        Date,               "datetime64[ns, US/Eastern]", True
+        column,    dtype,                         mandatory
+        Column1,   int64,                         True
+        Date,      "datetime64[ns, US/Eastern]",  True
     """
     SAMPLE_SCHEMA = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     df = pd.DataFrame({"Column1": [1], "Date": ["2021-01-01T12:00:00"]})
@@ -191,12 +210,12 @@ def test_datetime_with_timezone():
     assert result["Date"].dtype == "datetime64[ns, US/Eastern]"
 
 
-def test_unknown_datetime_dtype() -> None:
+def test_unknown_datetime_dtype():
     df = pd.DataFrame({"Column1": [1], "Date": ["2021-01-01"]})
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
-        Date,               datetime64[unknown],  True
+        column,    dtype,                  mandatory
+        Column1,   int64,                  True
+        Date,      datetime64[unknown],    True
     """
     schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
 
@@ -204,14 +223,14 @@ def test_unknown_datetime_dtype() -> None:
         enforce_schema(df, schema)
 
 
-def test_datetime_tz_convert() -> None:
+def test_datetime_tz_convert():
     df = pd.DataFrame(
         {"Column1": [1], "Date": pd.to_datetime(["2021-01-01T12:00:00"]).tz_localize("UTC")}
     )
     schema_csv = """
-        column_name,        dtype,                        mandatory
-        Column1,            int64,                        True
-        Date,               "datetime64[ns, US/Eastern]", True
+        column,    dtype,                          mandatory
+        Column1,   int64,                          True
+        Date,      "datetime64[ns, US/Eastern]",   True
     """
     schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     result = enforce_schema(df, schema)
@@ -227,9 +246,9 @@ def test_datetime_tz_convert() -> None:
 
 def test_datetime_conversion_fail():
     schema_csv = """
-        column_name,        dtype,                mandatory
-        Column1,            int64,                True
-        Date,               datetime64[ns],       True
+        column,    dtype,           mandatory
+        Column1,   int64,           True
+        Date,      datetime64[ns],  True
     """
     SAMPLE_SCHEMA = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     df = pd.DataFrame({"Column1": [1], "Date": ["not a date"]})
