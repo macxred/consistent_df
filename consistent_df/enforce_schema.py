@@ -1,9 +1,10 @@
 """Module to enforce column schemas in pandas DataFrames."""
 
 import re
+import pandas as pd
 from io import StringIO
 from zoneinfo import ZoneInfo
-import pandas as pd
+
 
 SCHEMA_CSV = """
     column,         dtype,     mandatory
@@ -17,8 +18,8 @@ SCHEMA = pd.read_csv(StringIO(SCHEMA_CSV), skipinitialspace=True)
 def enforce_schema(
     data: pd.DataFrame,
     schema: pd.DataFrame,
+    sort_columns: bool = False,
     keep_extra_columns: bool = False,
-    sort_columns: bool = False
 ) -> pd.DataFrame:
     """Enforce schema and type consistency in a pandas DataFrame.
 
@@ -84,7 +85,6 @@ def enforce_schema(
 
 
 def _enforce_schema(data: pd.DataFrame, schema: pd.DataFrame) -> pd.DataFrame:
-
     if not data.empty:
         missing_cols = set(schema.loc[schema["mandatory"], "column"]).difference(data.columns)
         if missing_cols:
