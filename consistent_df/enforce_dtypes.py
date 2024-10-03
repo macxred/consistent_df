@@ -68,7 +68,7 @@ def enforce_dtypes(
 
         missing_cols = [col for col in required if col not in data.columns]
         if missing_cols:
-            raise ValueError(f"Input DataFrame is missing required columns: {missing_cols}")
+            raise ValueError(f"Data frame is missing required columns: {missing_cols}")
 
         for col, dtype in all_cols.items():
             if col not in data:

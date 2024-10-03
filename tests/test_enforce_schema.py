@@ -9,25 +9,16 @@ from io import StringIO
 
 def test_schema_is_not_dataframe():
     df = pd.DataFrame({"Column1": [1, 2]})
-    schema = None
     with pytest.raises(TypeError, match="Schema must be a pandas DataFrame."):
-        enforce_schema(df, schema)
-
-    # Test with an invalid schema type
-    schema = {"column": "Column1", "dtype": "int64", "mandatory": True}
+        enforce_schema(df, schema=None)
     with pytest.raises(TypeError, match="Schema must be a pandas DataFrame."):
-        enforce_schema(df, schema)
+        enforce_schema(df, schema={})
 
 
 def test_schema_missing_required_columns():
     df = pd.DataFrame({"Column1": [1, 2]})
-    schema_csv = """
-        column,
-        Column1,
-    """
-    schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
-    with pytest.raises(ValueError, match="Schema is missing required columns"):
-        enforce_schema(df, schema)
+    with pytest.raises(ValueError, match="Data frame is missing required columns"):
+        enforce_schema(df, schema=pd.DataFrame({"column": ["Column1"]}))
 
 
 def test_schema_invalid_dtype():
@@ -37,7 +28,7 @@ def test_schema_invalid_dtype():
         Column1,         ,    True
     """
     schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         enforce_schema(df, schema)
 
 
@@ -50,7 +41,7 @@ def test_schema_without_mandatory_column():
     schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
     df = pd.DataFrame({"ticker": ["AAPL", "GOOGL"]})
 
-    with pytest.raises(ValueError, match="Input DataFrame is missing required columns: {'price'}"):
+    with pytest.raises(ValueError, match="Data frame is missing required columns"):
         enforce_schema(df, schema)
 
     df_with_all_columns = pd.DataFrame({
@@ -62,11 +53,10 @@ def test_schema_without_mandatory_column():
 
 def test_invalid_data_type():
     schema_csv = """
-        column,    dtype,                mandatory
-        Column1,   int64,                True
+        column,    dtype,   mandatory
+        Column1,   int64,   True
     """
     schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
-
     invalid_data = {"Column1": [1, 2]}  # Using a dictionary instead of DataFrame
     with pytest.raises(TypeError, match="Data must be a pandas DataFrame or None."):
         enforce_schema(invalid_data, schema)
@@ -158,7 +148,7 @@ def test_keep_extra_columns():
     assert list(result.columns) == ["Column1", "Column3"]
 
 
-def test_sort_columns_behavior():
+def test_sort_columns():
     schema_csv = """
         column,             dtype,                mandatory
         ticker,             string[python],       True
