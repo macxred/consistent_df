@@ -158,6 +158,29 @@ def test_keep_extra_columns():
     assert list(result.columns) == ["Column1", "Column3"]
 
 
+def test_sort_columns_behavior():
+    schema_csv = """
+        column,             dtype,                mandatory
+        ticker,             string[python],       True
+        price,              float64,              True
+    """
+    schema = pd.read_csv(StringIO(schema_csv), skipinitialspace=True)
+    df = pd.DataFrame({
+        'price': [150.0, 2800.0],
+        'ticker': ['AAPL', 'GOOGL']
+    })
+
+    result_sorted = enforce_schema(df, schema, sort_columns=True)
+    assert list(result_sorted.columns) == ['ticker', 'price'], (
+        "Columns are not sorted correctly with sort_columns=True."
+    )
+
+    result_unsorted = enforce_schema(df, schema, sort_columns=False)
+    assert list(result_unsorted.columns) == ['price', 'ticker'], (
+        "Columns should not be sorted with sort_columns=False."
+    )
+
+
 def test_dtype_conversion():
     schema_csv = """
         column,    dtype,     mandatory

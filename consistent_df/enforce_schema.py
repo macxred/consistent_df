@@ -8,15 +8,13 @@ import pandas as pd
 def enforce_schema(
     data: pd.DataFrame,
     schema: pd.DataFrame,
-    keep_extra_columns: bool = False
+    keep_extra_columns: bool = False,
+    sort_columns: bool = False
 ) -> pd.DataFrame:
     """Enforce presence and data types of DataFrame columns.
 
     This function ensures that required columns are present, adds missing optional columns,
-    enforces the specified data types, and orders the columns as defined by the schema.
-
-    Existing required and optional columns are converted to specified dtypes,
-    leading to an error if type conversion fails.
+    enforces the specified data types.
 
     Args:
         data (pd.DataFrame | None): The DataFrame to validate and transform.
@@ -27,6 +25,8 @@ def enforce_schema(
               or optional (False). If missing, all columns are considered mandatory.
         keep_extra_columns (bool): If True, columns not listed in the schema are retained.
                                    If False, only columns defined in the schema will be kept.
+        sort_columns (bool): If True, columns will be ordered as per the schema. If False,
+                             the original column order is retained.
 
     Returns:
         pd.DataFrame: Transformed DataFrame adhering to the schema.
@@ -52,7 +52,6 @@ def enforce_schema(
     """
 
     required_schema_columns = {"column", "dtype"}
-
     if not isinstance(schema, pd.DataFrame):
         raise TypeError("Schema must be a pandas DataFrame.")
     if not required_schema_columns.issubset(schema.columns):
@@ -105,9 +104,11 @@ def enforce_schema(
 
         if not keep_extra_columns:
             data = data[[col for col in data.columns if col in schema["column"].to_list()]]
-        data = data[
-            schema["column"].to_list()
-            + data.columns[~data.columns.isin(schema["column"].to_list())].tolist()
-        ]
+
+        if sort_columns:
+            data = data[
+                schema["column"].to_list()
+                + data.columns[~data.columns.isin(schema["column"].to_list())].tolist()
+            ]
 
     return data
