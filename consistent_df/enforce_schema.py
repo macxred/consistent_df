@@ -86,7 +86,7 @@ def enforce_schema(
 
 def _enforce_schema(data: pd.DataFrame, schema: pd.DataFrame) -> pd.DataFrame:
     if not data.empty:
-        missing_cols = set(schema.loc[schema["mandatory"], "column"]).difference(data.columns)
+        missing_cols = set(schema.query("mandatory")["column"]).difference(data.columns)
         if missing_cols:
             raise ValueError(f"Data frame is missing required columns: {missing_cols}")
 
