@@ -6,6 +6,10 @@ from io import StringIO
 from zoneinfo import ZoneInfo
 
 
+# TODO: remove this rule when Pandas release the 3.0 version with default copy on write
+pd.options.mode.copy_on_write = True
+
+
 SCHEMA_CSV = """
     column,         dtype,     mandatory
     column,         str,       True
