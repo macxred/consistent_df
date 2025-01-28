@@ -1,55 +1,43 @@
-on:
-  # For all pushes run the tests
-  push:
-  # Also trigger on pull_request
-  pull_request:
-  # Run nightly tests at 04:00 UTC
-  schedule:
-    - cron: "0 4 * * *"
-  # Manually triggered
-  workflow_dispatch:
+# ---------------------------------------------------------------------------------
+# Unit/Integration Tests
+#
+# This workflow runs unit and integration tests.
+#
+# It is triggered:
+# - on every push and pull request,
+# - nightly at 04:00 UTC,
+# - manually via workflow dispatch.
+# ---------------------------------------------------------------------------------
 
 name: Unit/Integration Tests
 
-concurrency:
-  # Within the same concurrency group, run only one job at a time
-  # New jobs cancel existing pending jobs
-  group: CashCtrl-test-account
-  cancel-in-progress: false
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
 
 jobs:
-  docker:
+  tests:
+    name: Run Unit/Integration Tests
     runs-on: ubuntu-latest
-    container:
-      image: python:latest
-    if: |
-        (github.event_name == 'pull_request_target' && github.actor == 'dependabot[bot]') ||
-        (github.event_name != 'pull_request_target' && github.actor != 'dependabot[bot]')
-    steps:
-      - name: Checkout
-        if: ${{ github.event_name != 'pull_request_target' }}
-        uses: actions/checkout@v4
 
-      - name: Checkout PR
-        if: ${{ github.event_name == 'pull_request_target' }}
+    steps:
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
-      - name: Setup virtualenv
-        run: |
-          python -V  # Print out python version for debugging
-          pip install virtualenv pytest
-          virtualenv venv
-          . venv/bin/activate
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
 
       - name: Install dependencies
-        run: pip install coverage pytest pandas setuptools
+        run: pip install coverage setuptools .
 
-      - name: Install package
-        run: python setup.py develop
-
-      - name: Run tests
+      - name: Run tests with coverage
         run: coverage run -m pytest -W error
 
       - name: Upload coverage to Codecov
