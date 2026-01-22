@@ -94,6 +94,8 @@ def _enforce_schema(data: pd.DataFrame, schema: pd.DataFrame) -> pd.DataFrame:
         if col not in data:
             data[col] = pd.Series(dtype=dtype)
         else:
+            if pd.isna(dtype):
+                raise TypeError(f"dtype for column '{col}' is missing or invalid.")
             if dtype.startswith("datetime64"):
                 if re.fullmatch("datetime64\\[ns\\]", dtype):
                     timezone = None
@@ -103,13 +105,15 @@ def _enforce_schema(data: pd.DataFrame, schema: pd.DataFrame) -> pd.DataFrame:
                 else:
                     raise ValueError(f"Unknown datetime dtype: '{dtype}'.")
                 try:
-                    data[col] = pd.to_datetime(data[col]).astype(dtype)
+                    data[col] = pd.to_datetime(data[col])
                 except pd._libs.tslibs.parsing.DateParseError as e:
                     raise type(e)(f"Failed to convert '{col}' to {dtype}: {e}")
-                if data[col].dt.tz is None:
-                    data[col] = data[col].dt.tz_localize(timezone)
+                if timezone is None:
+                    data[col] = data[col].astype(dtype)
+                elif data[col].dt.tz is None:
+                    data[col] = data[col].dt.tz_localize(timezone).astype(dtype)
                 else:
-                    data[col] = data[col].dt.tz_convert(timezone)
+                    data[col] = data[col].dt.tz_convert(timezone).astype(dtype)
             else:
                 try:
                     data[col] = data[col].astype(dtype)

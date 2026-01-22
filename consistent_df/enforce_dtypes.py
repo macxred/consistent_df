@@ -86,10 +86,12 @@ def enforce_dtypes(
                         data[col] = pd.to_datetime(data[col], format="mixed")
                     except pd._libs.tslibs.parsing.DateParseError as e:
                         raise type(e)(f"Failed to convert '{col}' to {dtype}: {e}")
-                    if data[col].dt.tz is None:
-                        data[col] = data[col].dt.tz_localize(timezone)
+                    if timezone is None:
+                        data[col] = data[col].astype(dtype)
+                    elif data[col].dt.tz is None:
+                        data[col] = data[col].dt.tz_localize(timezone).astype(dtype)
                     else:
-                        data[col] = data[col].dt.tz_convert(timezone)
+                        data[col] = data[col].dt.tz_convert(timezone).astype(dtype)
                 else:
                     try:
                         data[col] = data[col].astype(dtype)
