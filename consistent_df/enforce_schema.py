@@ -103,7 +103,7 @@ def _enforce_schema(data: pd.DataFrame, schema: pd.DataFrame) -> pd.DataFrame:
                 else:
                     raise ValueError(f"Unknown datetime dtype: '{dtype}'.")
                 try:
-                    data[col] = pd.to_datetime(data[col])
+                    data[col] = pd.to_datetime(data[col]).astype(dtype)
                 except pd._libs.tslibs.parsing.DateParseError as e:
                     raise type(e)(f"Failed to convert '{col}' to {dtype}: {e}")
                 if data[col].dt.tz is None:
