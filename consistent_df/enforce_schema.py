@@ -85,18 +85,28 @@ def enforce_schema(
 
 
 def _enforce_schema(data: pd.DataFrame, schema: pd.DataFrame) -> pd.DataFrame:
+    columns = schema["column"].values
+    dtypes = schema["dtype"].values
+    mandatory_mask = schema["mandatory"].values
+
     if not data.empty:
-        missing_cols = set(schema.query("mandatory")["column"]).difference(data.columns)
+        mandatory_cols = set(columns[mandatory_mask])
+        missing_cols = mandatory_cols.difference(data.columns)
         if missing_cols:
             raise ValueError(f"Data frame is missing required columns: {missing_cols}")
 
-    for col, dtype in zip(schema["column"], schema["dtype"]):
-        if col not in data:
+    data_dtypes = {c: str(dt) for c, dt in data.dtypes.items()}
+
+    for col, dtype in zip(columns, dtypes):
+        if col not in data_dtypes:
             data[col] = pd.Series(dtype=dtype)
         else:
             if pd.isna(dtype):
                 raise TypeError(f"dtype for column '{col}' is missing or invalid.")
+            current_dtype = data_dtypes[col]
             if dtype.startswith("datetime64"):
+                if current_dtype == dtype:
+                    continue
                 if re.fullmatch("datetime64\\[ns\\]", dtype):
                     timezone = None
                 elif re.fullmatch("datetime64\\[ns, .+\\]", dtype):
@@ -115,6 +125,8 @@ def _enforce_schema(data: pd.DataFrame, schema: pd.DataFrame) -> pd.DataFrame:
                 else:
                     data[col] = data[col].dt.tz_convert(timezone).astype(dtype)
             else:
+                if current_dtype == dtype:
+                    continue
                 try:
                     data[col] = data[col].astype(dtype)
                 except (TypeError, ValueError) as e:
