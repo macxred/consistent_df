@@ -78,8 +78,9 @@ def enforce_schema(
     if not keep_extra_columns:
         result = result[result.columns[result.columns.isin(schema["column"])]]
     if sort_columns:
-        cols = (schema["column"].to_list()
-                + data.columns[~data.columns.isin(schema["column"])].to_list())
+        extra = (result.columns[~result.columns.isin(schema["column"])].to_list()
+                 if keep_extra_columns else [])
+        cols = schema["column"].to_list() + extra
         result = result[cols]
     return result
 
