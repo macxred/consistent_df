@@ -7,7 +7,7 @@ setup(
     url='https://github.com/macxred/consistent_df',
     author="Lukas Elmiger, Oleksandr Stepanenko",
     python_requires='>3.9',
-    install_requires=['pandas'],
+    install_requires=['pandas', 'polars'],
     packages=find_packages(exclude=('tests', 'examples')),
     extras_require={
         "dev": [
